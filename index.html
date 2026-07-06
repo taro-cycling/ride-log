@@ -188,6 +188,7 @@ nav button.active{color:var(--orange)}
     <p style="font-size:.8rem;color:var(--sub)">全データをJSONファイルとして書き出します。書き出したファイルをGoogleドライブに保存し、もう一方の端末で「読み込み」してください。</p>
     <div class="row mt8">
       <button class="btn-p hidden" id="btnShare" onclick="app.shareData()">共有 (ドライブ等へ)</button>
+      <button class="btn-p hidden" id="btnDrive" onclick="app.exportAndDrive()">書き出してドライブを開く</button>
       <button class="btn-s" onclick="app.exportData()">書き出し (ファイル保存)</button>
       <button class="btn-ghost" onclick="document.getElementById('impFile').click()">読み込み</button>
     </div>
@@ -642,14 +643,18 @@ const app={
     document.getElementById("s-racedate").value=r.date||"";
     document.getElementById("s-goal").value=r.goal||"";
     document.getElementById("s-lastexp").textContent="前回のエクスポート: "+(this.data.lastExport||"まだありません");
-    // 共有機能が使える環境でのみ共有ボタンを表示
+    // 共有機能が使える環境(主にスマホ)は共有ボタン、それ以外(主にPC)はドライブを開くボタンを表示
     let canShare=false;
     try{
       const tf=new File(["t"],"t.json",{type:"application/json"});
       canShare=!!(navigator.share&&navigator.canShare&&navigator.canShare({files:[tf]}));
     }catch(e){}
-    document.getElementById("btnShare").classList.toggle("hidden",!canShare);
-    if(canShare)document.getElementById("shareHelp").textContent="「共有」からGoogleドライブ等に直接送れます。使えない場合は「書き出し」→ドライブへアップロードしてください。";
+    const isMobile=/Android|iPhone|iPad/i.test(navigator.userAgent);
+    document.getElementById("btnShare").classList.toggle("hidden",!(canShare&&isMobile));
+    document.getElementById("btnDrive").classList.toggle("hidden",canShare&&isMobile);
+    document.getElementById("shareHelp").textContent=(canShare&&isMobile)
+      ?"「共有」を押すとスマホの共有メニューが開きます。Googleドライブを選んで共有フォルダに保存してください。"
+      :"「書き出してドライブを開く」でファイル保存とドライブの画面が同時に開きます。保存されたJSONファイルをドライブへドラッグ＆ドロップしてください。";
   },
   histTable(arr,key,unit,extra){
     if(!arr||!arr.length)return'<p style="font-size:.78rem;color:var(--sub)">履歴なし</p>';
@@ -705,6 +710,11 @@ const app={
     this.renderSettings();
   },
   exportName(){ return "ride-log_"+(this.data.athlete.name||"data")+"_"+this.todayStr()+".json"; },
+  exportAndDrive(){
+    this.exportData();
+    setTimeout(()=>{ window.open("https://drive.google.com/drive/my-drive","_blank"); },400);
+    alert("JSONファイルを保存し、Googleドライブを開きました。\n\n保存したファイル（ダウンロードフォルダ）を、開いたドライブの画面にドラッグ＆ドロップするか、「＋新規」→ファイルのアップロードで置いてください。");
+  },
   shareData(){
     const json=JSON.stringify(this.data,null,2);
     let file=null;
