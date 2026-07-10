@@ -1221,7 +1221,7 @@ const app={
 
   /* ---------- エクスポート / インポート ---------- */
   exportData(){
-    if(this.isMobile()){ this.exportShare(); return; }
+    if(this.isMobile()){ this.exportShare(false); return; }
     this.data.lastExport=this.todayStr();
     this.save();
     const name=this.exportName();
@@ -1234,7 +1234,7 @@ const app={
   },
   isIOS(){ return /iPhone|iPad|iPod/.test(navigator.userAgent); },
   isMobile(){ return /Android|iPhone|iPad|iPod/.test(navigator.userAgent); },
-  exportShare(){
+  exportShare(showGuide){
     const json=JSON.stringify(this.data,null,2);
     // 第1候補: スマホの共有メニュー(Googleドライブ等へ直接保存)
     let file=null;
@@ -1244,13 +1244,13 @@ const app={
         this.data.lastExport=this.todayStr(); this.save(); this.renderSettings();
       }).catch(err=>{
         if(err&&err.name==="AbortError")return; // ユーザーがキャンセルしただけ
-        this.exportShareFallback(json);
+        this.exportShareFallback(json,showGuide);
       });
       return;
     }
-    this.exportShareFallback(json);
+    this.exportShareFallback(json,showGuide);
   },
-  exportShareFallback(json){
+  exportShareFallback(json,showGuide){
     // 第2候補: ファイルダウンロード(https環境)
     if(location.protocol==="https:"){
       try{
@@ -1260,7 +1260,7 @@ const app={
         document.body.appendChild(a); a.click();
         setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
         this.data.lastExport=this.todayStr(); this.save(); this.renderSettings();
-        this.confirmModal("ファイルを端末のダウンロードに保存しました。<br>Googleドライブに置くには、<b>ドライブアプリの「＋」→「アップロード」</b>からこのファイルを選んでください。",()=>{},"OK");
+        if(showGuide)this.confirmModal("ファイルを端末のダウンロードに保存しました。<br>Googleドライブに置くには、<b>ドライブアプリの「＋」→「アップロード」</b>からこのファイルを選んでください。",()=>{},"OK");
         return;
       }catch(e){}
     }
@@ -1291,7 +1291,7 @@ const app={
   },
   exportName(){ return "ride-log_"+(this.data.athlete.name||"data")+"_"+this.todayStr()+".json"; },
   exportAndDrive(){
-    if(this.isMobile()){ this.exportShare(); return; }
+    if(this.isMobile()){ this.exportShare(true); return; }
     this.exportData();
     setTimeout(()=>{ window.open("https://drive.google.com/drive/my-drive","_blank"); },400);
   },
