@@ -266,7 +266,7 @@ nav button.active{color:var(--orange)}
       <button class="btn-s" onclick="app.exportData()">書き出しのみ</button>
       <button class="btn-ghost" onclick="document.getElementById('impFile').click()">読み込み</button>
     </div>
-    <p style="font-size:.73rem;color:var(--sub)" class="mt8">iPhoneでは共有メニューが開くので「Drive」を選んで共有フォルダに保存してください。パソコン・Androidではファイルが保存されるので、Googleドライブへアップロードしてください。</p>
+    <p style="font-size:.73rem;color:var(--sub)" class="mt8">スマホでは共有メニューが開くので「Drive」を選んで共有フォルダに保存してください。パソコンではファイルが保存され、同時に開くGoogleドライブへドラッグ＆ドロップしてください。</p>
     <input type="file" id="impFile" accept=".json,.txt,application/json,text/plain" class="hidden" onchange="app.importData(this)">
     <p style="font-size:.75rem;color:var(--sub)" class="mt8" id="s-lastexp"></p>
     <div class="callout co-info" style="font-size:.78rem">読み込み時は<b>新しい記録だけを取り込み</b>ます（既存データは消えません）。すべて置き換えたい場合は下の詳細オプションを使ってください。</div>
@@ -1221,7 +1221,7 @@ const app={
 
   /* ---------- エクスポート / インポート ---------- */
   exportData(){
-    if(this.isIOS()){ this.exportIOS(); return; }
+    if(this.isMobile()){ this.exportShare(); return; }
     this.data.lastExport=this.todayStr();
     this.save();
     const name=this.exportName();
@@ -1233,9 +1233,10 @@ const app={
     this.renderSettings();
   },
   isIOS(){ return /iPhone|iPad|iPod/.test(navigator.userAgent); },
-  exportIOS(){
+  isMobile(){ return /Android|iPhone|iPad|iPod/.test(navigator.userAgent); },
+  exportShare(){
     const json=JSON.stringify(this.data,null,2);
-    // 第1候補: iOSの共有メニュー(Googleドライブ等へ直接保存できる)
+    // 第1候補: スマホの共有メニュー(Googleドライブ等へ直接保存)
     let file=null;
     try{ file=new File([json],this.exportName(),{type:"application/json"}); }catch(e){}
     if(file&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
@@ -1243,14 +1244,14 @@ const app={
         this.data.lastExport=this.todayStr(); this.save(); this.renderSettings();
       }).catch(err=>{
         if(err&&err.name==="AbortError")return; // ユーザーがキャンセルしただけ
-        this.exportIOSFallback(json);
+        this.exportShareFallback(json);
       });
       return;
     }
-    this.exportIOSFallback(json);
+    this.exportShareFallback(json);
   },
-  exportIOSFallback(json){
-    // 第2候補: ファイルダウンロード(https+Safariなら可)
+  exportShareFallback(json){
+    // 第2候補: ファイルダウンロード(https環境)
     if(location.protocol==="https:"){
       try{
         const blob=new Blob([json],{type:"application/json"});
@@ -1259,10 +1260,11 @@ const app={
         document.body.appendChild(a); a.click();
         setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
         this.data.lastExport=this.todayStr(); this.save(); this.renderSettings();
+        this.confirmModal("ファイルを端末のダウンロードに保存しました。<br>Googleドライブに置くには、<b>ドライブアプリの「＋」→「アップロード」</b>からこのファイルを選んでください。",()=>{},"OK");
         return;
       }catch(e){}
     }
-    // 第3候補: コピー方式(Documents等のローカル利用向け)
+    // 第3候補: コピー方式(ローカル利用時の保険)
     this.exportModalShow();
   },
   exportModalShow(){
@@ -1289,7 +1291,7 @@ const app={
   },
   exportName(){ return "ride-log_"+(this.data.athlete.name||"data")+"_"+this.todayStr()+".json"; },
   exportAndDrive(){
-    if(this.isIOS()){ this.exportIOS(); return; }
+    if(this.isMobile()){ this.exportShare(); return; }
     this.exportData();
     setTimeout(()=>{ window.open("https://drive.google.com/drive/my-drive","_blank"); },400);
   },
