@@ -1313,14 +1313,23 @@ const app={
   },
   mergeImport(inc){
     const cur=this.data;
+    // プロフィール項目: アプリ側が初期値・空欄の場合のみ、ファイルの値を採用する
+    const ia=inc.athlete||{};
+    if((!cur.athlete.name||cur.athlete.name==="選手")&&ia.name)cur.athlete.name=ia.name;
+    if(cur.athlete.heightCm==null&&ia.heightCm!=null)cur.athlete.heightCm=ia.heightCm;
+    const lr=cur.athlete.targetRace||{};
+    if(!(lr.name||lr.date||lr.goal)&&ia.targetRace&&(ia.targetRace.name||ia.targetRace.date||ia.targetRace.goal))
+      cur.athlete.targetRace=ia.targetRace;
     // 履歴は日付で統合
     const mergeHist=(a,b,k)=>{ const map={}; [...(a||[]),...(b||[])].forEach(h=>{map[h.date]=h;}); return Object.keys(map).sort().map(d=>map[d]); };
     cur.athlete.ftpHistory=mergeHist(cur.athlete.ftpHistory,inc.athlete.ftpHistory);
     cur.athlete.weightHistory=mergeHist(cur.athlete.weightHistory,inc.athlete.weightHistory);
-    // 最新FTP/体重は履歴の最後を採用
+    // 最新FTP/体重は履歴の最後を採用(履歴が空の場合はファイルの現在値を採用)
     const fh=cur.athlete.ftpHistory, wh=cur.athlete.weightHistory;
     if(fh.length)cur.athlete.currentFtpW=fh[fh.length-1].ftpW;
+    else if(ia.currentFtpW)cur.athlete.currentFtpW=ia.currentFtpW;
     if(wh.length)cur.athlete.currentWeightKg=wh[wh.length-1].weightKg;
+    else if(ia.currentWeightKg)cur.athlete.currentWeightKg=ia.currentWeightKg;
     // 週はlastModifiedが新しい方を採用
     (inc.weeks||[]).forEach(iw=>{
       const i=cur.weeks.findIndex(w=>w.weekStartDate===iw.weekStartDate);
