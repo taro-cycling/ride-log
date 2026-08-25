@@ -18,11 +18,16 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{font-size:16px}
 body{background:var(--bg);color:var(--txt);font-family:var(--body);line-height:1.7;padding-bottom:calc(70px + env(safe-area-inset-bottom))}
-header{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,#0d1b2a 70%,rgba(13,27,42,.92));padding:14px 16px 10px;border-bottom:1px solid var(--line);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+/* ヘッダーはノッチ(ダイナミックアイランド/カメラ切り欠き)の下に来るよう、
+   上端にセーフエリア分の余白を足す。横向き時は左右の切り欠きも避ける。 */
+header{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,#0d1b2a 70%,rgba(13,27,42,.92));
+  padding:calc(14px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px)) 10px calc(16px + env(safe-area-inset-left,0px));
+  border-bottom:1px solid var(--line);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 header h1{font-family:var(--disp);font-size:1.7rem;letter-spacing:.06em;color:var(--sky)}
 header h1 span{color:var(--orange)}
 header .sub{font-size:.72rem;color:var(--sub);letter-spacing:.05em}
-main{max-width:820px;margin:0 auto;padding:16px 14px 30px}
+main{max-width:820px;margin:0 auto;
+  padding:16px calc(14px + env(safe-area-inset-right,0px)) 30px calc(14px + env(safe-area-inset-left,0px))}
 h2{font-family:var(--head);font-size:1.15rem;font-weight:600;color:var(--sky);border-left:4px solid var(--orange);padding-left:10px;margin:22px 0 12px;letter-spacing:.04em}
 h3{font-family:var(--head);font-size:.98rem;font-weight:600;color:var(--txt);margin:14px 0 8px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
@@ -62,7 +67,8 @@ td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 .ins-t{font-weight:700;font-size:.88rem;margin-bottom:3px}
 .ins-d{font-size:.8rem;color:var(--txt);opacity:.9;margin-bottom:4px}
 .ins-e{font-size:.73rem;color:var(--sub);font-variant-numeric:tabular-nums}
-nav{position:fixed;bottom:0;left:0;right:0;z-index:60;display:flex;background:#0a1520;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:60;display:flex;background:#0a1520;border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
 nav button{flex:1;background:none;border-radius:0;padding:9px 2px 7px;color:var(--sub);font-size:.62rem;font-weight:500;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.2}
 nav button .ic{font-size:1.15rem;line-height:1}
 nav button.active{color:var(--orange)}
@@ -93,7 +99,8 @@ nav button.active{color:var(--orange)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media(max-width:420px){.grid3{grid-template-columns:repeat(3,1fr);gap:6px}.stat .num{font-size:1.6rem}}
 .hidden{display:none!important}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;display:flex;align-items:center;justify-content:center;
+  padding:calc(18px + env(safe-area-inset-top,0px)) calc(18px + env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) calc(18px + env(safe-area-inset-left,0px))}
 .modal{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;width:100%;max-width:440px;max-height:82vh;overflow:auto}
 .modal h3{margin-top:0;color:var(--sky)}
 .m-err{color:var(--red);font-size:.8rem;margin-top:6px;min-height:1em}
