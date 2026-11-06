@@ -139,6 +139,14 @@ nav button.active{color:var(--orange)}
 .cal-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:.7rem;color:var(--sub);align-items:center}
 .cal-legend span{display:flex;align-items:center;gap:4px}
 .cal-legend i{display:inline-block;width:8px;height:8px;border-radius:50%}
+.avail-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.avail-grid select{padding:6px 2px;font-size:13px;text-align:center}
+.avail-d{text-align:center;font-size:.74rem;color:var(--sky);font-weight:700;line-height:1.2}
+.avail-d small{display:block;font-size:.62rem;color:var(--sub);font-weight:400}
+@media(max-width:420px){.avail-grid{grid-template-columns:repeat(4,1fr)}}
+.tag-auto{border-color:var(--green);color:var(--green)}
+.tag-short{border-color:var(--sky);color:var(--sky)}
+.need{outline:2px solid var(--orange);outline-offset:1px}
 .mt8{margin-top:8px}.mt14{margin-top:14px}
 .flexb{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 </style>
@@ -146,7 +154,7 @@ nav button.active{color:var(--orange)}
 <body>
 <header>
   <h1>RIDE <span>LOG</span></h1>
-  <div class="sub" id="headSub">インターハイまで — 日</div>
+  <div class="sub" id="headSub"></div>
 </header>
 <main>
 
@@ -231,7 +239,7 @@ nav button.active{color:var(--orange)}
 
 <!-- ══════ レビュー ══════ -->
 <section class="screen" id="scr-review">
-  <h2>レビュー（コーチ用）</h2>
+  <h2>レビュー</h2>
   <div class="row" style="margin-bottom:10px">
     <button id="rv-week" class="btn-p btn-sm" onclick="app.setRevView('week')">週間</button>
     <button id="rv-month" class="btn-ghost btn-sm" onclick="app.setRevView('month')">月間</button>
@@ -240,7 +248,10 @@ nav button.active{color:var(--orange)}
   </div>
   <div class="card">
     <b style="font-size:.9rem">AIに相談する</b>
-    <p style="font-size:.78rem;color:var(--sub);margin:4px 0 8px">直近4週の実績・コンディション・自動判定をまとめてコピーします。AIとの会話に貼り付けて、来週のプランを相談してください。</p>
+    <p style="font-size:.78rem;color:var(--sub);margin:4px 0 8px">直近4週の実績・コンディション・自動判定と、下に入れた「使える時間」をまとめてコピーします。AIとの会話に貼り付けるだけでプランを相談できます。</p>
+    <h3 style="margin-top:4px">① 使える時間を入れる</h3>
+    <div id="availBox"></div>
+    <h3>② コピーしてAIに貼り付ける</h3>
     <div class="row">
       <button class="btn-p" onclick="app.copyCoachSummary()">📋 サマリーをコピー</button>
       <button class="btn-ghost" onclick="app.previewCoachSummary()">内容を確認</button>
@@ -300,13 +311,13 @@ nav button.active{color:var(--orange)}
 
 <!-- ══════ 設定 ══════ -->
 <section class="screen" id="scr-set">
-  <h2>選手情報</h2>
+  <h2>プロフィール</h2>
   <div class="card">
     <div class="row">
       <div><label>名前</label><input id="s-name"></div>
       <div><label>身長 (cm)</label><input id="s-height" type="number" inputmode="decimal"></div>
     </div>
-    <button class="btn-s btn-sm mt8" onclick="app.saveProfile()">選手情報を保存</button>
+    <button class="btn-s btn-sm mt8" onclick="app.saveProfile()">プロフィールを保存</button>
   </div>
   <h2>FTPの更新</h2>
   <div class="card">
@@ -443,29 +454,30 @@ const DEFAULT_DATA = {
     {id:"threshold",name:"閾値走 (FTPインターバル)",cat:"高強度",zone:"Z4",pMin:91,pMax:105,cad:"88-92",st:{type:"i",wMin:8,wMax:20,sets:"2-4",rest:10},
      purpose:"FTPそのものの向上",effect:"乳酸を「出しながら処理する」能力を高める。長い登坂・逃げの巡航に直結。",
      how:"代表例: 2×20分 @95-98%FTP、レスト10分。",
-     caution:"週2回まで。翌日は回復走かL2に留める。",fatigue:7},
+     caution:"週2回まで。翌日は回復走かエンデュランス走に留める。",fatigue:7},
     {id:"vo2max",name:"VO2maxインターバル",cat:"高強度",zone:"Z5",pMin:106,pMax:120,cad:"95-105",st:{type:"i",wMin:3,wMax:5,sets:"4-6",rest:4},
-     purpose:"最大酸素摂取量（心肺の天井）の向上",effect:"心肺能力の上限を引き上げる。アタック追走・ペースアップ対応・トラック追抜に直結。",
+     purpose:"最大酸素摂取量（心肺の天井）の向上",effect:"心肺能力の上限を引き上げる。登坂やペースアップへの対応力に直結。",
      how:"レストは運動時間と同程度（例: 4分走・4分レスト）。3〜5分全力で持続できる強度。",
      caution:"最も消耗が大きい。週1〜2回まで。前後に回復日を。",fatigue:9},
     {id:"anaerobic",name:"無酸素インターバル",cat:"高強度",zone:"Z6",pMin:121,pMax:150,cad:"95-110",st:{type:"i",wMin:0.5,wMax:2,sets:"5-10",rest:4},
      purpose:"アタック・ブリッジ・ゴール前の抜け出し",effect:"無酸素性のパワー持続力を鍛える。数十秒〜1分の勝負所を支える。",
      how:"レストは運動時間の2〜3倍。パワーが維持できなくなったら打ち切る。",
-     caution:"この能力は有限。レースでは温存・配分が鍵（全国大会の教訓）。週1〜2回まで。",fatigue:8},
+     caution:"消耗が大きい。パワーが落ちたら本数が残っていても打ち切る。週1〜2回まで。",fatigue:8},
     {id:"sprint",name:"スプリント",cat:"高強度",zone:"Z7",pMin:151,pMax:null,cad:"110-130",st:{type:"i",wMin:0.1,wMax:0.25,sets:"5-10",rest:4},
      purpose:"最大出力と神経系（もがき）の強化",effect:"最大パワーと素早いペダリングの神経筋協調を鍛える。スプリンター型の武器を磨く。",
      how:"5〜15秒全力×5〜10本。レストは完全回復(3〜5分)。低速もがき出し・ロングスプリント等、形式を変える。",
-     caution:"位置取り・仕掛けの戦術練習と必ずセットで。新鮮な状態で実施。",fatigue:5},
+     caution:"疲れていない日に実施。実走では安全な場所で。",fatigue:5},
     {id:"sfr",name:"SFR (低ケイデンス高トルク)",cat:"技術・筋力系",zone:"Z3",pMin:80,pMax:100,cad:"40-50",st:{type:"i",wMin:5,wMax:10,sets:"3-5",rest:5},
      purpose:"ペダリング筋力・トルクの強化",effect:"自転車上で行う筋トレ。ペダリング筋力を競技動作に近い形で鍛える。",
      how:"緩〜中斜度の登りをシッティングのまま重いギアで。上体を揺すらず踏み抜く。",
-     caution:"膝への負担大。成長期は本数・頻度を抑えめに。痛みが出たら即中止。ギアは指導者に確認。",fatigue:6},
+     caution:"膝への負担大。本数・頻度は控えめから始める。膝に違和感が出たら即中止。",fatigue:6},
     {id:"highCadence",name:"高ケイデンス走 (スピンアップ)",cat:"技術・筋力系",zone:"Z2",pMin:40,pMax:70,cad:"110-130",st:{type:"i",wMin:1,wMax:3,sets:"3-6",rest:3},
      purpose:"ペダリング効率・神経系の強化",effect:"滑らかで速いペダリングを養い、ペース変化や高速域への対応力を上げる。",
-     how:"軽いギアで。上体が跳ねない上限ケイデンスを探る。W-upやL2走に組み込みやすい。",
+     how:"軽いギアで。上体が跳ねない上限ケイデンスを探る。ウォームアップやエンデュランス走に組み込みやすい。",
      caution:"ワットが目的ではない。フォームが崩れたら回転を下げる。",fatigue:2}
   ],
   customMenus:[], // AI/手作業で追加したメニュー(内蔵10種と違い、更新で消えない)
+  avail:{},       // 週ごとの「使える時間」 {週の月曜日:{mins:[月..日],note}}
   weeks:[],
   lastExport:null
 };
@@ -571,7 +583,8 @@ const app={
   migrate(d){
     if(!d||typeof d!=="object")return JSON.parse(JSON.stringify(DEFAULT_DATA));
     if(!d.meta)d.meta={};
-    d.meta.version="1.2";
+    d.meta.version="1.3";
+    if(!d.avail||typeof d.avail!=="object"||Array.isArray(d.avail))d.avail={};
     // athlete
     if(!d.athlete)d.athlete=JSON.parse(JSON.stringify(DEFAULT_DATA.athlete));
     const a=d.athlete;
@@ -845,6 +858,157 @@ const app={
     const w=p&&p.workMin?p.workMin:(m.st.wMin+"–"+m.st.wMax), s=p&&p.sets?p.sets:m.st.sets, r=p&&p.restMin!=null?p.restMin:m.st.rest;
     return w+"分 × "+s+"本 (レスト"+r+"分)";
   },
+  // 予定（または短縮版）の所要時間（分）。本数が "2-3" のような幅なら少ない方で数える
+  plannedMinutes(m,p){
+    if(!m)return null;
+    p=p||{};
+    if(m.st.type==="c")return Number(p.durationMin)||m.st.wMin;
+    const w=Number(p.workMin)||m.st.wMin;
+    const n=parseInt(String(p.sets!=null?p.sets:m.st.sets),10)||1;
+    const r=p.restMin!=null?Number(p.restMin):m.st.rest;
+    return Math.round(w*n+r*(n-1));
+  },
+  setsNum(v){ const n=parseInt(String(v==null?"":v),10); return isFinite(n)&&n>0?n:null; },
+
+  /* ===================================================================
+     ライドと予定メニューの自動照合
+     Garminのライドが入った日に、未実施の予定があれば実施済みにする。
+     - 予定が1つでライドが1本なら、時間と平均パワーもライドから入れる
+     - 予定が複数なら、時間は予定の値を入れる（平均パワーは空欄）
+     - ライドが予定より明らかに短く（75%未満）、短縮版があれば短縮版で実施扱い
+     RPEは本人にしか分からないので空欄のまま（intervals.icuでRPEを付けていれば使う）
+     =================================================================== */
+  autoMatchDay(day){
+    if(!day||!day.date)return 0;
+    const rides=this.rideList(day).filter(r=>r.source==="icu"&&Number(r.minutes)>0);
+    if(!rides.length)return 0;
+    const open=(day.sessions||[]).filter(s=>this.menuById(s.menuId)&&!(s.actual&&s.actual.done));
+    if(!open.length)return 0;
+    const rideMin=rides.reduce((t,r)=>t+Number(r.minutes),0);
+    const icuRpe=rides.map(r=>Number(r.icuRpe)).find(v=>v>0&&v<=10);
+    const single=open.length===1&&day.sessions.length===1;
+    open.forEach(s=>{
+      if(!s.actual)s.actual={};
+      const m=this.menuById(s.menuId), p=s.planned||{};
+      const planMin=this.plannedMinutes(m,p);
+      const useShort=!!(s.short&&single&&planMin&&rideMin<planMin*0.75);
+      s.actual.done=true; s.actual.auto=true;
+      if(useShort)s.actual.short=true;
+      this.stampDone(s,day.date);
+      if(s.actual.durationMin==null)
+        s.actual.durationMin=single?rideMin:(useShort?this.plannedMinutes(m,s.short):planMin);
+      if(s.actual.setsCompleted==null&&m.st.type==="i"){
+        const n=this.setsNum(useShort?s.short.sets:p.sets);
+        if(n)s.actual.setsCompleted=n;
+      }
+      if(s.actual.avgPowerW==null&&single&&rides.length===1&&Number(rides[0].avgPower)>0)
+        s.actual.avgPowerW=Math.round(rides[0].avgPower);
+      if(s.actual.rpe==null&&icuRpe)s.actual.rpe=icuRpe;
+    });
+    return open.length;
+  },
+  autoMatchWeek(mon){
+    const wk=this.data.weeks.find(w=>w.weekStartDate===mon); if(!wk)return 0;
+    let n=0; wk.days.forEach(d=>{ n+=this.autoMatchDay(d); });
+    if(n)wk.lastModified=Date.now();
+    return n;
+  },
+  // 実施済みなのにRPEが入っていないメニュー（直近14日）
+  rpePending(){
+    const today=this.todayStr(), from=this.addDays(today,-13), out=[];
+    this.data.weeks.forEach(w=>(w.days||[]).forEach(d=>{
+      if(d.date<from||d.date>today)return;
+      (d.sessions||[]).forEach(s=>{ if(s.actual&&s.actual.done&&!s.actual.rpe&&this.menuById(s.menuId))out.push({date:d.date,s:s}); });
+    }));
+    return out.sort((a,b)=>a.date.localeCompare(b.date));
+  },
+  // その日に「何かしら記録がある」か（ライド・実施済みメニュー・体調などの入力）
+  dayHasRecord(d){
+    if(!d)return false;
+    if(this.rideList(d).length)return true;
+    if((d.sessions||[]).some(s=>s.actual&&s.actual.done))return true;
+    const dl=d.dailyLog||{};
+    return !!(Number(dl.totalTrainingMin)>0||dl.condition||dl.sleepHours||dl.dailyNote||dl.weightKg||dl.stretch||dl.strength);
+  },
+  recordDates(){
+    const out=[];
+    this.data.weeks.forEach(w=>(w.days||[]).forEach(d=>{ if(this.dayHasRecord(d))out.push(d.date); }));
+    return [...new Set(out)].sort();
+  },
+  daysBetween(a,b){ return Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/86400000); },
+  /* 休止・再開の状況。
+     paused: 最後の記録から14日以上空いている（いま休止中）
+     resumed: 直近60日以内に14日以上の空白があり、その後に再開している */
+  breakStatus(){
+    const today=this.todayStr();
+    const ds=this.recordDates().filter(d=>d<=today);
+    if(!ds.length)return null;
+    const last=ds[ds.length-1], idle=this.daysBetween(last,today);
+    if(idle>=14)return {paused:true,last:last,days:idle};
+    for(let i=ds.length-1;i>0;i--){
+      const g=this.daysBetween(ds[i-1],ds[i]);
+      if(this.daysBetween(ds[i],today)>60)break;
+      if(g>=14)return {paused:false,from:ds[i-1],to:ds[i],days:g};
+    }
+    return null;
+  },
+
+  /* ===================================================================
+     使える時間（AIに相談する週の、曜日ごとの練習可能時間）
+     data.avail[週の月曜日] = {mins:[月..日 の分 or null], note:""}
+     =================================================================== */
+  AVAIL_OPTS:[["","未入力"],["0","不可"],["20","20分"],["30","30分"],["45","45分"],["60","60分"],["75","75分"],
+    ["90","90分"],["120","2時間"],["150","2.5時間"],["180","3時間"],["240","4時間"]],
+  availWeek:null,
+  availTarget(){
+    const cur=this.weekOf(this.todayStr());
+    if(this.availWeek!==cur&&this.availWeek!==this.addDays(cur,7))this.availWeek=this.addDays(cur,7);
+    return this.availWeek;
+  },
+  availOf(mon){ const a=(this.data.avail||{})[mon]; return a&&Array.isArray(a.mins)?a:null; },
+  renderAvail(){
+    const box=document.getElementById("availBox"); if(!box)return;
+    const cur=this.weekOf(this.todayStr()), mon=this.availTarget();
+    const av=this.availOf(mon)||{mins:[null,null,null,null,null,null,null],note:""};
+    const total=av.mins.reduce((t,v)=>t+(Number(v)>0?Number(v):0),0);
+    const filled=av.mins.some(v=>v!=null);
+    let h='<div class="row" style="margin-bottom:6px">'
+      +'<button class="'+(mon===cur?"btn-p":"btn-ghost")+' btn-sm" onclick="app.availWeek=\''+cur+'\';app.renderAvail()">今週 '+this.fmtMD(cur)+'〜</button>'
+      +'<button class="'+(mon!==cur?"btn-p":"btn-ghost")+' btn-sm" onclick="app.availWeek=\''+this.addDays(cur,7)+'\';app.renderAvail()">来週 '+this.fmtMD(this.addDays(cur,7))+'〜</button></div>'
+      +'<div class="avail-grid">';
+    for(let i=0;i<7;i++){
+      const dt=this.addDays(mon,i), v=av.mins[i];
+      h+='<div><div class="avail-d">'+DAYS_JP[new Date(dt+"T00:00:00").getDay()]+'<small>'+this.fmtMD(dt)+'</small></div>'
+        +'<select onchange="app.availSet('+i+',this.value)">'
+        +this.AVAIL_OPTS.map(o=>'<option value="'+o[0]+'"'+(String(v==null?"":v)===o[0]?" selected":"")+'>'+o[1]+'</option>').join("")
+        +'</select></div>';
+    }
+    h+='</div><label>事情・条件（任意）</label><input id="availNote" value="'+this.esc(av.note||"")+'" placeholder="例: 平日は室内のZwiftのみ。木曜は当直明け" onchange="app.availSet(-1,this.value)">'
+      +'<div class="flexb mt8" style="font-size:.76rem;color:var(--sub)"><span>'+(filled?'合計 <b style="color:var(--orange)">'+this.fmtMin(total)+'</b>（サマリーに入ります）':'未入力の日は「指定なし」としてAIに伝えます')+'</span>'
+      +'<button class="btn-ghost btn-sm" onclick="app.availCopyPrev()">前回の入力をコピー</button></div>';
+    box.innerHTML=h;
+  },
+  availSet(i,val){
+    const mon=this.availTarget();
+    if(!this.data.avail)this.data.avail={};
+    const av=this.data.avail[mon]||(this.data.avail[mon]={mins:[null,null,null,null,null,null,null],note:""});
+    if(i<0)av.note=String(val||"");
+    else av.mins[i]=val===""?null:Number(val);
+    this.save(); this.renderAvail();
+  },
+  availCopyPrev(){
+    const mon=this.availTarget(), all=this.data.avail||{};
+    const prev=Object.keys(all).filter(k=>k<mon&&all[k]&&Array.isArray(all[k].mins)&&all[k].mins.some(v=>v!=null)).sort().pop();
+    if(!prev){ this.confirmModal("コピーできる前回の入力がありません。",()=>{},"OK"); return; }
+    all[mon]={mins:all[prev].mins.slice(),note:all[prev].note||""};
+    this.save(); this.renderAvail();
+  },
+  /* 短縮版（時間が取れない日のための軽い版）の表示 */
+  shortHtml(m,s){
+    if(!s||!s.short)return "";
+    return '<div class="spec" style="color:var(--sky)">⏱ 時間がない日: '+this.esc(this.specText(m,s.short))
+      +(s.short.note?' ｜ '+this.esc(s.short.note):'')+'</div>';
+  },
 
   /* ---------- ナビ ---------- */
   nav(id){
@@ -880,9 +1044,29 @@ const app={
     // コンディション(PMC)
     const p=this.pmcOn(today), warm=this.pmcWarmupDays();
     let ph="";
+    // 休止中なら、再開の手順を一番上に出す
+    const br=this.breakStatus();
+    if(br&&br.paused){
+      const fh=a.ftpHistory||[], lf=fh.length?fh[fh.length-1]:null;
+      ph+='<div class="callout co-cau" style="margin-top:14px"><div class="ins-t">⏸ 前回の記録から '+br.days+'日 空いています</div>'
+        +'<div style="font-size:.78rem;color:var(--sub);margin-bottom:6px">最後の記録: '+this.fmtYMD(br.last)+'。無理なく戻るための3ステップです。</div>'
+        +'<ol style="font-size:.8rem;margin:0 0 6px 20px">'
+        +'<li><b>FTPを見直す</b> — 今のFTPは '+a.currentFtpW+'W'+(lf?'（'+this.fmtYMD(lf.date)+' 更新）':'（未測定）')+'。空いた後は以前の値だと強度が高すぎることがあります。最初の1〜2週は控えめに扱い、慣れたら測り直してください。</li>'
+        +'<li><b>使える時間を入れてAIに相談する</b> — レビュー画面で曜日ごとの時間を選び、サマリーをコピーします。休止していたこともサマリーに入ります。</li>'
+        +'<li><b>1週目は低強度を短く</b> — 回復走・エンデュランス走を20〜45分。強度より「回数」を優先します。</li></ol>'
+        +'<div class="row"><button class="btn-ghost btn-sm" onclick="app.nav(\'set\')">FTPを確認</button>'
+        +'<button class="btn-p btn-sm" onclick="app.nav(\'review\')">使える時間を入れる →</button></div></div>';
+    }
+    // 実施済みなのにRPEが未入力のメニュー（Garminから自動で実施済みにしたもの等）
+    const rp=this.rpePending();
+    if(rp.length){
+      ph+='<div class="callout co-info" style="cursor:pointer" onclick="app.logPickDate(\''+rp[rp.length-1].date+'\');app.nav(\'log\')">'
+        +'✎ <b>RPE（きつさ）が未入力のメニューが '+rp.length+'件</b>あります（直近14日）。'
+        +'<div style="font-size:.74rem;color:var(--sub)">'+[...new Set(rp.map(x=>this.fmtMD(x.date)))].join("・")+' ／ タップで記録画面へ</div></div>';
+    }
     if(p){
       const tsbCol=p.tsb>5?"var(--green)":(p.tsb<-20?"var(--red)":(p.tsb<-10?"var(--orange)":"var(--sky)"));
-      ph='<h2>コンディション</h2><div class="grid3">'
+      ph+='<h2>コンディション</h2><div class="grid3">'
         +'<div class="stat"><div class="num">'+Math.round(p.ctl)+'</div><div class="lbl">体力 CTL</div></div>'
         +'<div class="stat"><div class="num">'+Math.round(p.atl)+'</div><div class="lbl">疲労 ATL</div></div>'
         +'<div class="stat"><div class="num" style="color:'+tsbCol+'">'+(p.tsb>0?"+":"")+Math.round(p.tsb)+'</div><div class="lbl">調子 TSB</div></div></div>';
@@ -910,9 +1094,9 @@ const app={
         html+='<div class="sess"><div class="sess-top"><span class="sname"><span class="badge" style="background:'+z.color+'">'+z.id+'</span> '+this.esc(m.name)+'</span>'
           +'<span class="done-chip '+(s.actual&&s.actual.done?"done-yes":"done-no")+'">'+(s.actual&&s.actual.done?"実施済":"未実施")+'</span></div>'
           +'<div class="spec">'+this.specText(m,s.planned)+' ｜ '+this.watts(m.pMin,m.pMax,this.sessionFtp(s,today))+' ｜ ケイデンス'+m.cad+this.ftpNote(s,today)+'</div>'
-          +(s.note?'<div class="spec">📝 '+this.esc(s.note)+'</div>':"")+'</div>';
+          +(s.note?'<div class="spec">📝 '+this.esc(s.note)+'</div>':"")+this.shortHtml(m,s)+'</div>';
       });
-      html+='<button class="btn-p btn-sm" onclick="app.nav(\'log\')">今日の記録を入力する →</button>';
+      html+='<button class="btn-p btn-sm" onclick="app.logPickDate(app.todayStr());app.nav(\'log\')">今日の記録を入力する →</button>';
     } else {
       html='<div class="card">今日の予定はありません。'+(wk?"":"今週のプランがまだありません。「プラン」から作成できます。")+'</div>';
     }
@@ -1010,7 +1194,9 @@ const app={
           const z=this.zoneById(m.zone);
           html+='<div class="sess"><div class="sess-top"><span class="sname"><span class="badge" style="background:'+z.color+'">'+z.id+'</span> '+this.esc(m.name)+'</span>'
             +'<span><button class="btn-ghost btn-sm" onclick="app.editSession('+di+','+si+')">編集</button> <button class="btn-danger btn-sm" onclick="app.delSession('+di+','+si+')">削除</button></span></div>'
-            +'<div class="spec">'+this.specText(m,s.planned)+' ｜ '+this.watts(m.pMin,m.pMax,this.sessionFtp(s,d.date))+this.ftpNote(s,d.date)+(s.note?' ｜ 📝 '+this.esc(s.note):"")+'</div></div>';
+            +'<div class="spec">'+this.specText(m,s.planned)+' ｜ '+this.watts(m.pMin,m.pMax,this.sessionFtp(s,d.date))+this.ftpNote(s,d.date)+(s.note?' ｜ 📝 '+this.esc(s.note):"")+'</div>'
+            +this.shortHtml(m,s)
+            +((s.actual&&s.actual.done)?'<div class="spec" style="color:var(--green)">✓ 実施済'+(s.actual.short?'（短縮版）':'')+'</div>':'')+'</div>';
         });
         html+='</div></div>';
       });
@@ -1073,7 +1259,7 @@ const app={
       const z=this.zoneById(m.zone); const a=s.actual||{};
       body+='<div class="sess"><div class="sess-top"><span class="sname"><span class="badge" style="background:'+z.color+'">'+z.id+'</span> '+this.esc(m.name)+'</span>'
         +'<span class="done-chip '+(a.done?"done-yes":"done-no")+'">'+(a.done?"実施済":"未実施")+'</span></div>'
-        +'<div class="spec">'+this.specText(m,s.planned)+' ｜ '+this.watts(m.pMin,m.pMax,this.sessionFtp(s,dstr))+this.ftpNote(s,dstr)+(s.note?'<br>📝 '+this.esc(s.note):"")+'</div></div>';
+        +'<div class="spec">'+this.specText(m,s.planned)+' ｜ '+this.watts(m.pMin,m.pMax,this.sessionFtp(s,dstr))+this.ftpNote(s,dstr)+(s.note?'<br>📝 '+this.esc(s.note):"")+'</div>'+this.shortHtml(m,s)+'</div>';
     });
     const dl=day.dailyLog||{};
     if(dl.dailyNote)body+='<div class="note-line"><div class="nd">気づき</div>'+this.esc(dl.dailyNote)+'</div>';
@@ -1087,12 +1273,15 @@ const app={
     const inp=document.getElementById("mw-date"); if(inp)inp.value=dstr;
   },
   /* ---------- モーダル(入力画面) ---------- */
+  _modalSeq:0,
   openModal(title,bodyHtml,onOK,okLabel){
+    const seq=++this._modalSeq;
     document.getElementById("mTitle").textContent=title;
     document.getElementById("mBody").innerHTML=bodyHtml;
     document.getElementById("mErr").textContent="";
     document.getElementById("mOK").textContent=okLabel||"OK";
-    document.getElementById("mOK").onclick=()=>{ if(onOK()!==false)this.closeModal(); };
+    // OKの処理の中で次の画面（結果のお知らせ等）を開いた場合は、それを閉じない
+    document.getElementById("mOK").onclick=()=>{ const r=onOK(); if(r!==false&&this._modalSeq===seq)this.closeModal(); };
     document.getElementById("modalBg").classList.remove("hidden");
   },
   closeModal(){ document.getElementById("modalBg").classList.add("hidden"); },
@@ -1104,7 +1293,7 @@ const app={
   newWeekDialog(){
     this.openModal("新しい週を作成",
       '<label>週に含まれる日付（その週の月曜はじまりで作成します）</label><input type="date" id="mw-date" value="'+this.todayStr()+'">'
-      +'<label>週の名前（例: 強化期 第2週）</label><input id="mw-label" placeholder="未入力なら日付から自動で付けます">',
+      +'<label>週の名前（例: 再開1週目）</label><input id="mw-label" placeholder="未入力なら日付から自動で付けます">',
       ()=>{
         const d=document.getElementById("mw-date").value;
         if(!d){this.mErr("日付を選択してください");return false;}
@@ -1173,7 +1362,13 @@ const app={
         +'<div><label>本数</label><input type="number" inputmode="numeric" id="ms-sets" value="'+(p.sets??String(m.st.sets).split("-")[0])+'"></div>'
         +'<div><label>レスト (分)</label><input type="number" inputmode="numeric" id="ms-rest" value="'+(p.restMin??m.st.rest)+'"></div></div>';
     }
-    body+='<label>メモ（任意。例: 美山の坂を想定）</label><input id="ms-note" value="'+this.esc(editing?(s.note||""):"")+'">';
+    body+='<label>メモ（任意。例: Zwift 150-160W。ウォームアップ10分→本編→クールダウン10分）</label><input id="ms-note" value="'+this.esc(editing?(s.note||""):"")+'">';
+    const sh=editing&&s.short?s.short:{};
+    body+='<h3 style="font-size:.85rem;color:var(--sky)">⏱ 時間がない日の短縮版（任意）</h3>'
+      +'<div class="row">'
+      +(isC?'<div><label>時間 (分)</label><input type="number" inputmode="numeric" id="ms-sdur" value="'+(sh.durationMin??"")+'" placeholder="例: 20"></div>'
+           :'<div><label>本数</label><input type="number" inputmode="numeric" id="ms-ssets" value="'+(sh.sets??"")+'" placeholder="例: 1"></div>')
+      +'</div><label>短縮版のメモ</label><input id="ms-snote" value="'+this.esc(sh.note||"")+'" placeholder="例: ウォームアップ5分→本編1本→クールダウン5分">';
     this.openModal(editing?"メニューを編集":"内容を設定",body,()=>{
       const planned={};
       if(isC){ planned.durationMin=Number(document.getElementById("ms-dur").value)||m.st.wMin; }
@@ -1183,8 +1378,13 @@ const app={
         planned.restMin=Number(document.getElementById("ms-rest").value)||m.st.rest;
       }
       const note=document.getElementById("ms-note").value;
-      if(editing){ s.planned=planned; s.note=note; }
-      else wk.days[di].sessions.push({menuId:menuId,planned:planned,actual:{done:false},note:note});
+      // 短縮版: 連続系は時間、インターバル系は本数だけ減らす（1本の時間・レストは通常と同じ）
+      let short=null;
+      if(isC){ const v=Number(document.getElementById("ms-sdur").value); if(v>0)short={durationMin:v}; }
+      else{ const v=Number(document.getElementById("ms-ssets").value); if(v>0)short={workMin:planned.workMin,sets:v,restMin:planned.restMin}; }
+      if(short)short.note=document.getElementById("ms-snote").value;
+      if(editing){ s.planned=planned; s.note=note; if(short)s.short=short; else delete s.short; }
+      else{ const ns={menuId:menuId,planned:planned,actual:{done:false},note:note}; if(short)ns.short=short; wk.days[di].sessions.push(ns); }
       wk.lastModified=Date.now(); this.save(); this.renderPlan();
     },editing?"保存する":"追加する");
   },
@@ -1211,7 +1411,7 @@ const app={
     if(!day){
       html+='<div class="card" style="font-size:.84rem;color:var(--sub)">この週のプランはまだありません。'
         +'ライドの取り込みや記録を入力すると、その週が自動で作られます。'
-        +'<button class="btn-ghost btn-sm mt8" onclick="app.nav(\'plan\')">プラン画面で week を組む →</button></div>';
+        +'<button class="btn-ghost btn-sm mt8" onclick="app.nav(\'plan\')">プラン画面で週を組む →</button></div>';
     }
     {
       if(day&&!day.sessions.length) html+='<div class="card" style="font-size:.84rem;color:var(--sub)">この日は予定メニューなしです。「ライドの記録」と「1日の記録」を入力できます。</div>';
@@ -1224,11 +1424,18 @@ const app={
         html+='<div class="card"><div class="flexb"><b><span class="badge" style="background:'+z.color+'">'+z.id+'</span> '+this.esc(m.name)+'</b>'
           +'<label style="margin:0;display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--txt)"><input type="checkbox" style="width:22px;height:22px" '+(a.done?"checked":"")+' onchange="app.logSet(\''+date+'\','+si+',\'done\',this.checked)"> 実施した</label></div>'
           +'<div class="spec" style="font-size:.78rem;color:var(--sub)">予定: '+this.specText(m,s.planned)+' ｜ '+this.watts(m.pMin,m.pMax,this.sessionFtp(s,date))+this.ftpNote(s,date)+'</div>'
+          +(s.note?'<div class="spec" style="font-size:.78rem;color:var(--sub)">📝 '+this.esc(s.note)+'</div>':'')
+          +this.shortHtml(m,s)
+          +((a.done&&(a.auto||a.short))?'<div class="mt8">'
+            +(a.auto?'<span class="tag tag-auto">Garminのライドから自動で実施済み</span>':'')
+            +(a.short?'<span class="tag tag-short">短縮版で実施</span>':'')+'</div>':'')
+          +((s.short&&!a.done)?'<button class="btn-ghost btn-sm mt8" style="border-color:var(--sky);color:var(--sky)" onclick="app.logShort(\''+date+'\','+si+')">⏱ 短縮版で実施した</button>':'')
+          +((a.done&&!a.rpe)?'<div style="font-size:.74rem;color:var(--orange);margin-top:6px">RPE（きつさ）が未入力です。覚えているうちに入れてください。</div>':'')
           +'<div class="row mt8">'
           +'<div><label>実施時間 (分)</label><input type="number" inputmode="numeric" value="'+(a.durationMin??"")+'" onchange="app.logSet(\''+date+'\','+si+',\'durationMin\',this.value)"></div>'
           +(isC?"":'<div><label>完遂本数</label><input type="number" inputmode="numeric" value="'+(a.setsCompleted??"")+'" onchange="app.logSet(\''+date+'\','+si+',\'setsCompleted\',this.value)"></div>')
           +'<div><label>平均パワー (W)</label><input type="number" inputmode="numeric" value="'+(a.avgPowerW??"")+'" onchange="app.logSet(\''+date+'\','+si+',\'avgPowerW\',this.value)"></div>'
-          +'<div><label>RPE･きつさ (1-10)</label><input type="number" inputmode="numeric" min="1" max="10" value="'+(a.rpe??"")+'" onchange="app.logSet(\''+date+'\','+si+',\'rpe\',this.value)"></div></div>'
+          +'<div><label>RPE･きつさ (1-10)</label><input type="number" inputmode="numeric" min="1" max="10"'+((a.done&&!a.rpe)?' class="need"':'')+' value="'+(a.rpe??"")+'" onchange="this.classList.toggle(\'need\',!this.value);app.logSet(\''+date+'\','+si+',\'rpe\',this.value)"></div></div>'
           +'<label>このメニューのメモ</label><input value="'+this.esc(a.sessionNote??"")+'" placeholder="例: 5本目は出力低下のため打ち切り" onchange="app.logSet(\''+date+'\','+si+',\'sessionNote\',this.value)">'
           +'</div>';
       });
@@ -1267,7 +1474,7 @@ const app={
         html+='<div class="callout co-info" style="margin-bottom:14px">この日の合計 TSS <b>'+(dt!=null?Math.round(dt):"--")+'</b> ／ 合計 '+this.fmtMin(this.rideMinutes(day))+'</div>';
       }
       html+='<h2>1日の記録</h2><div class="card">'
-        +'<div class="row"><div><label>合計練習時間 (分)</label><input type="number" inputmode="numeric" placeholder="'+(this.daySessionMinutes(day)||"")+'" value="'+(dl.totalTrainingMin??"")+'" onchange="app.dailySet(\''+date+'\',\'totalTrainingMin\',this.value)"><div style="font-size:.7rem;color:var(--sub)">'+(this.daySessionMinutes(day)?'空欄ならメニュー実績の合計 '+this.daySessionMinutes(day)+'分 を使います。アップ・ダウンや予定外の走行を含める場合はここに総時間を入力してください。':'空欄なら実績から自動計算')+'</div></div>'
+        +'<div class="row"><div><label>合計練習時間 (分)</label><input type="number" inputmode="numeric" placeholder="'+(this.daySessionMinutes(day)||"")+'" value="'+(dl.totalTrainingMin??"")+'" onchange="app.dailySet(\''+date+'\',\'totalTrainingMin\',this.value)"><div style="font-size:.7rem;color:var(--sub)">'+(this.daySessionMinutes(day)?'空欄ならメニュー実績の合計 '+this.daySessionMinutes(day)+'分 を使います。ウォームアップ・クールダウンや予定外の走行を含める場合はここに総時間を入力してください。':'空欄なら実績から自動計算')+'</div></div>'
         +'<div><label>走行距離 (km)</label><input type="number" inputmode="decimal" step="0.1" value="'+(dl.distanceKm??"")+'" onchange="app.dailySet(\''+date+'\',\'distanceKm\',this.value)"></div>'
         +'</div>'
         +'<div class="mt8"><label>体調 (1-5)</label><select onchange="app.dailySet(\''+date+'\',\'condition\',this.value)"><option value="">-</option>'
@@ -1305,14 +1512,34 @@ const app={
     const wk=this.data.weeks.find(w=>w.weekStartDate===this.weekOf(date)); if(!wk)return;
     const day=wk.days.find(d=>d.date===date); if(!day)return;
     const s=day.sessions[si]; if(!s.actual)s.actual={done:false};
-    if(field==="done")s.actual.done=!!val;
+    if(field==="done"){
+      s.actual.done=!!val;
+      if(!val){ delete s.actual.auto; delete s.actual.short; } // 外したら自動・短縮の印も外す
+    }
     else if(field==="sessionNote")s.actual.sessionNote=val;
+    else if(field==="rpe"){
+      const n=Number(val);
+      s.actual.rpe=(val===""||!isFinite(n))?null:Math.min(10,Math.max(1,Math.round(n)));
+    }
     else s.actual[field]=val===""?null:Number(val);
     const autoDone=(field!=="done"&&val!==""&&!s.actual.done);
     if(autoDone)s.actual.done=true;
     if(s.actual.done)this.stampDone(s,date); // 実施済みになった時点のFTP/体重を固定
     wk.lastModified=Date.now(); this.save();
-    if(autoDone)this.renderLog();
+    // 表示（タグ・未入力の注意）を最新にする。RPE入力時は次の欄へのフォーカスを奪わないよう再描画しない
+    if(autoDone||field==="done")this.renderLog();
+  },
+  // 短縮版で実施した（時間がない日用）
+  logShort(date,si){
+    const x=this._dayOf(date); if(!x||!x.day)return;
+    const s=x.day.sessions[si]; if(!s||!s.short)return;
+    const m=this.menuById(s.menuId); if(!m)return;
+    if(!s.actual)s.actual={};
+    s.actual.done=true; s.actual.short=true;
+    this.stampDone(s,date);
+    if(s.actual.durationMin==null)s.actual.durationMin=this.plannedMinutes(m,s.short);
+    if(m.st.type==="i"&&s.actual.setsCompleted==null){ const n=this.setsNum(s.short.sets); if(n)s.actual.setsCompleted=n; }
+    x.wk.lastModified=Date.now(); this.save(); this.renderLog();
   },
   /* ===================================================================
      intervals.icu 連携（Garmin → intervals.icu → このアプリ）
@@ -1428,7 +1655,8 @@ const app={
         +this.icuRangeNote(n,all),()=>{},"閉じる");
       return;
     }
-    const ftpOf=x=>Number(x.icuFtp)>0?Number(x.icuFtp):ftpOnDateFrom(this.data.athlete.ftpHistory,x.date,this.data.athlete.currentFtpW);
+    // TSSは常に RIDE LOG 側のFTP（その日時点）で計算する。intervals.icu側のFTPは比較用に保存するだけ
+    const ftpOf=x=>ftpOnDateFrom(this.data.athlete.ftpHistory,x.date,this.data.athlete.currentFtpW);
     const tssOf=x=>{ const f=ftpOf(x); return (x.np&&f)?(x.minutes*60*x.np*(x.np/f))/(f*3600)*100:null; };
     let totMin=0,totTss=0,tssN=0;
     fresh.forEach(x=>{ totMin+=x.minutes||0; const t=tssOf(x); if(t!=null){totTss+=t;tssN++;} });
@@ -1479,12 +1707,12 @@ const app={
       const dl=y.day.dailyLog;
       if(!Array.isArray(dl.rides))dl.rides=[];
       const a=this.data.athlete;
-      const ftp=Number(x.icuFtp)>0?Number(x.icuFtp):ftpOnDateFrom(a.ftpHistory,x.date,a.currentFtpW);
+      const ftp=ftpOnDateFrom(a.ftpHistory,x.date,a.currentFtpW);   // RIDE LOG側のFTPを正とする
       const r={np:x.np,minutes:x.minutes,ftp:ftp,source:"icu",icuId:x.icuId,
         actName:x.name,actType:x.type,startTime:x.startTime};
       // 詳細指標（無い項目は保存しない＝容量を無駄にしない）
       ["avgPower","maxPower","avgHr","maxHr","calories","avgCad","elevM","avgSpeedKmh",
-       "ef","decoupling","vi","trimp","wPrime","kjAboveFtp","work","icuTss","icuIf","elapsedMin","feel","icuRpe"]
+       "ef","decoupling","vi","trimp","wPrime","kjAboveFtp","work","icuTss","icuIf","icuFtp","elapsedMin","feel","icuRpe"]
         .forEach(k=>{ if(x[k]!=null&&!isNaN(x[k]))r[k]=x[k]; });
       if(x.zones)r.zones=x.zones;
       if(x.hrZones)r.hrZones=x.hrZones;
@@ -1493,6 +1721,9 @@ const app={
       if(x.distanceKm)dl.distanceKm=Math.round(((Number(dl.distanceKm)||0)+x.distanceKm)*10)/10;
       y.wk.lastModified=Date.now(); n++; last=x.date;
     });
+    // 取り込んだ日の予定メニューと照合して、実施済みにする
+    let matched=0;
+    [...new Set(list.map(x=>x.date))].forEach(dt=>{ const y=this._dayOf(dt); if(y&&y.day)matched+=this.autoMatchDay(y.day); });
     this.save();
     if(last){ document.getElementById("logDate").value=last; this.logCalMonth=last.slice(0,7); }
     this.nav("log");
@@ -1500,6 +1731,7 @@ const app={
     const chips=dates.slice(0,40).map(d=>'<button class="btn-ghost btn-sm" style="margin:2px" onclick="app.closeModal();app.logPickDate(\''+d+'\')">'+this.fmtMD(d)+'</button>').join("");
     this.openModal("取り込みました",
       '<p style="font-size:.88rem"><b>'+n+'件</b>を取り込みました（'+dates.length+'日分）。</p>'
+      +(matched?'<div class="callout co-good" style="font-size:.82rem">予定メニュー <b>'+matched+'件</b> を自動で実施済みにしました。<br>あとは記録画面で <b>RPE（きつさ）だけ</b>入れてください。</div>':'')
       +'<p style="font-size:.8rem;color:var(--sub)">記録画面は1日ずつの表示です。下の日付を押すとその日に移動します。</p>'
       +'<div style="margin-top:6px">'+chips+(dates.length>40?'<span style="font-size:.78rem;color:var(--sub)">ほか'+(dates.length-40)+'日</span>':'')+'</div>',
       ()=>{},"閉じる");
@@ -1597,7 +1829,10 @@ const app={
     let h='<details class="rd-wrap"><summary>詳細データ</summary><div class="rd-grid">'+row.join("")+'</div>';
     if(r.zones)h+=this.zoneBarHtml(r.zones,"パワーゾーン内訳");
     if(r.icuTss!=null&&this.rideTSS(r)!=null&&Math.abs(r.icuTss-this.rideTSS(r))>5)
-      h+='<p style="font-size:.7rem;color:var(--orange);margin:6px 0 0">※ intervals.icu の TSS ('+Math.round(r.icuTss)+') と差があります。FTPの設定が両者で違う可能性があります。</p>';
+      h+='<p style="font-size:.7rem;color:var(--orange);margin:6px 0 0">※ intervals.icu の TSS ('+Math.round(r.icuTss)+') と差があります。'
+        +(Number(r.icuFtp)>0&&Number(r.icuFtp)!==Number(r.ftp)
+          ?'intervals.icu 側のFTPは '+Math.round(r.icuFtp)+'W、RIDE LOG 側は '+r.ftp+'W です。intervals.icu と Edge のFTPを合わせてください。'
+          :'FTPの設定が両者で違う可能性があります。')+'</p>';
     h+='</details>';
     return h;
   },
@@ -1738,6 +1973,7 @@ const app={
   },
   revYearShift(n){ this.revYear=String(Number(this.revYear)+n); this.renderReview(); },
   renderReview(){
+    this.renderAvail();
     if(this.revView==="month"){ this.renderReviewMonth(); return; }
     if(this.revView==="year"){ this.renderReviewYear(); return; }
     if(this.revView==="graph"){ this.renderGraph(); return; }
@@ -1811,14 +2047,14 @@ const app={
     if(gaps.length){
       html+='<p style="font-size:.72rem;color:var(--sub)">※実施時間は<b>「1日の記録」の合計練習時間</b>を優先しています。'
         +gaps.map(x=>this.fmtMD(x.date)+'('+x.day+') 記録'+x.g.explicit+'分 / メニュー計'+x.g.sessions+'分'
-          +(x.g.diff>0?'（差 +'+x.g.diff+'分 = アップ・ダウンや予定外の走行）':'（差 '+x.g.diff+'分 — 入力をご確認ください）')).join(' ／ ')+'</p>';
+          +(x.g.diff>0?'（差 +'+x.g.diff+'分 = ウォームアップ・クールダウンや予定外の走行）':'（差 '+x.g.diff+'分 — 入力をご確認ください）')).join(' ／ ')+'</p>';
     }
     html+='</div>';
     html+='<h2>気づき・メモ '+this.weekRange(wk)+'</h2>';
     let notes="";
     wk.days.forEach(d=>{
       const dl=d.dailyLog||{};
-      const sn=d.sessions.filter(s=>s.actual&&s.actual.sessionNote).map(s=>this.esc(this.menuById(s.menuId).name)+": "+this.esc(s.actual.sessionNote)).join(" ／ ");
+      const sn=d.sessions.filter(s=>s.actual&&s.actual.sessionNote).map(s=>this.esc((this.menuById(s.menuId)||{name:s.menuId}).name)+": "+this.esc(s.actual.sessionNote)).join(" ／ ");
       if(dl.dailyNote||sn){
         notes+='<div class="note-line"><div class="nd">'+d.day+'曜 '+this.fmtMD(d.date)
           +(dl.condition?' <span class="tag">体調'+dl.condition+'</span>':"")+(dl.sleepHours?'<span class="tag">睡眠'+dl.sleepHours+'h</span>':"")
@@ -1888,7 +2124,7 @@ const app={
     if(A.cond!=null&&P[0]&&P[1]&&P[0].cond!=null&&P[1].cond!=null
        &&A.cond<P[0].cond&&P[0].cond<P[1].cond&&(P[1].cond-A.cond)>=0.5){
       add("warn","体調が3週連続で低下",
-        "疲労の蓄積、睡眠不足、体調不良などが考えられます。数値だけで判断せず、本人に直接確認してください。",
+        "疲労の蓄積、睡眠不足、仕事の負荷などが考えられます。数値だけで判断せず、生活全体を振り返ってください。",
         "平均体調 "+r1(P[1].cond)+" → "+r1(P[0].cond)+" → "+r1(A.cond)+"（5段階）");
     }
     if(A.sleep!=null&&A.sleep<6.5)add("caution","睡眠が不足気味",
@@ -1897,7 +2133,7 @@ const app={
     if(A.weight!=null&&P[3]&&P[3].weight!=null){
       const drop=(P[3].weight-A.weight)/P[3].weight*100;
       if(drop>=3)add("warn","体重が4週間で大きく減少",
-        "意図した減量でない場合、エネルギー不足の可能性があります。成長期は特に注意が必要な項目です。指導者・保護者と共有し、必要なら専門家に相談してください。",
+        "意図した減量でない場合、エネルギー不足の可能性があります。練習量に対して食事量が足りているか見直してください。",
         "体重 "+r1(P[3].weight)+"kg → "+r1(A.weight)+"kg（−"+r1(drop)+"%）");
     }
     // 同じメニューでRPEが上がっている = 同じ練習がきつくなっている
@@ -1974,10 +2210,17 @@ const app={
 
     L.push("=== RIDE LOG サマリー ("+today+") ===");
     L.push("");
-    L.push("■ 選手");
+    L.push("■ 本人");
     const fh=a.ftpHistory||[];
-    L.push("FTP "+a.currentFtpW+"W"+(fh.length?"（"+fh[fh.length-1].date+" 更新／"+(fh[fh.length-1].testMethod||"")+"）":"")
+    L.push("FTP "+a.currentFtpW+"W"+(fh.length?"（"+fh[fh.length-1].date+" 更新／"+(fh[fh.length-1].testMethod||"")+"）":"（未測定・初期値）")
       +" ／ 体重 "+r1(a.currentWeightKg)+"kg ／ "+wg(a.currentFtpW/a.currentWeightKg)+" W/kg");
+    L.push("パワーゾーン（現在のFTP基準）: "+this.data.zones.map(z=>z.id+" "+this.watts(z.pMin,z.pMax)).join(" / "));
+    const br=this.breakStatus();
+    if(br){
+      L.push("■ 休止・再開の状況");
+      if(br.paused)L.push("最後の記録は "+this.fmtYMD(br.last)+"。そこから "+br.days+"日 練習の記録がありません（現在休止中）。再開1週目として組んでください。");
+      else L.push(this.fmtYMD(br.from)+" 〜 "+this.fmtYMD(br.to)+" に "+br.days+"日 の空白があり、"+this.fmtYMD(br.to)+" から再開しています。");
+    }
     if(fh.length>=2){
       const f0=fh[0],f1=fh[fh.length-1];
       L.push("FTP推移: "+f0.date+" "+f0.ftpW+"W → "+f1.date+" "+f1.ftpW+"W（"+(f1.ftpW-f0.ftpW>=0?"+":"")+(f1.ftpW-f0.ftpW)+"W）");
@@ -2022,6 +2265,7 @@ const app={
           const g=Math.round((new Date(w.weekStartDate+"T00:00:00")-new Date(all[gi-1].weekStartDate+"T00:00:00"))/(86400000*7));
           if(g>1)gapNote="   ← 前の記録から"+(g-1)+"週空き";
         }
+        const shortN=w.days.reduce((t,d)=>t+(d.sessions||[]).filter(s=>s.actual&&s.actual.done&&s.actual.short).length,0);
         L.push(this.fmtYMD(w.weekStartDate)+"〜 | "
           +(A.tss!=null?String(Math.round(A.tss)).padStart(4):"   -")+" | "
           +(pct!=null?((pct>0?"+":"")+Math.round(pct)+"%").padStart(5):"    -")+" | "
@@ -2030,6 +2274,7 @@ const app={
           +String(r1(A.rpe)).padStart(3)+" | "+String(r1(A.cond)).padStart(4)+" | "
           +String(r1(A.sleep)).padStart(4)+" | "
           +(A.end?Math.round(A.end.ctl)+" / "+(A.end.tsb>0?"+":"")+Math.round(A.end.tsb):"-")
+          +(shortN?"   （うち短縮版"+shortN+"件）":"")
           +gapNote);
       });
       // 強度分布と成長指標（Garminのゾーン滞在時間から）
@@ -2074,22 +2319,38 @@ const app={
       curWk.days.forEach(d=>{
         const ss=(d.sessions||[]).map(s=>{
           const m=this.menuById(s.menuId); if(!m)return null;
-          return m.name+" "+this.specText(m,s.planned)+((s.actual&&s.actual.done)?" [実施済]":"");
+          return m.name+" "+this.specText(m,s.planned)+((s.actual&&s.actual.done)?(s.actual.short?" [短縮版で実施]":" [実施済]"):"");
         }).filter(Boolean);
         L.push("  "+DAYS_JP[new Date(d.date+"T00:00:00").getDay()]+" "+this.fmtYMD(d.date)+": "+(ss.length?ss.join(" ／ "):"休養"));
       });
     }
 
+    // 使える時間（本人がレビュー画面で入力したもの）
+    const tgt=this.availTarget(), av=this.availOf(tgt);
+    L.push("■ プランを作る週と、使える時間（本人入力）");
+    L.push("対象週: "+this.fmtYMD(tgt)+" 〜 "+this.fmtYMD(this.addDays(tgt,6)));
+    if(av&&av.mins.some(v=>v!=null)){
+      const lab=v=>v==null?"指定なし":(Number(v)===0?"不可":this.fmtMin(Number(v)));
+      L.push(av.mins.map((v,i)=>DAYS_JP[new Date(this.addDays(tgt,i)+"T00:00:00").getDay()]+" "+lab(v)).join(" ／ "));
+      const tot=av.mins.reduce((t,v)=>t+(Number(v)>0?Number(v):0),0);
+      L.push("合計 "+this.fmtMin(tot)+"。各日の時間（ウォームアップ・クールダウン込み）に収まるように組み、「不可」の日は休養日にしてください。");
+    }else L.push("曜日ごとの時間は未入力です。");
+    if(av&&av.note)L.push("事情・条件: "+av.note);
+
     // 返答フォーマット
     L.push("■ 使えるメニューID");
     L.push(this.data.menus.map(m=>m.id+"("+m.name+")").join(", "));
     L.push("■ 返答のお願い");
-    L.push("来週のプランを提案してください。最後に、下記の形式のJSONをコードブロックで1つだけ出力してください（アプリに貼り付けて取り込みます）。");
-    L.push('{"type":"ridelog-plan","weekStartDate":"'+this.addDays(this.weekOf(today),7)+'","weekLabel":"週の名前","targetHours":6,');
-    L.push(' "days":[{"i":0,"sessions":[]},{"i":1,"sessions":[{"menuId":"sst","workMin":20,"sets":2,"restMin":5,"note":"補足"}]}],');
+    L.push("上の対象週のプランを提案してください。最後に、下記の形式のJSONをコードブロックで1つだけ出力してください（アプリに貼り付けて取り込みます）。");
+    L.push('{"type":"ridelog-plan","weekStartDate":"'+tgt+'","weekLabel":"週の名前","targetHours":4,');
+    L.push(' "days":[{"i":0,"sessions":[]},{"i":1,"sessions":[{"menuId":"sst","workMin":10,"sets":2,"restMin":5,');
+    L.push('   "note":"Zwift '+this.watts(88,94)+'。ウォームアップ10分→本編→クールダウン10分",');
+    L.push('   "short":{"workMin":10,"sets":1,"restMin":5,"note":"Zwift '+this.watts(88,94)+'。ウォームアップ5分→本編1本→クールダウン5分"}}]}],');
     L.push(' "newMenus":[]}');
     L.push("・i は 0=月 〜 6=日。sessions が空の日は休養日になります。");
     L.push("・連続系メニュー（recovery/endurance/tempo）は workMin/sets/restMin ではなく durationMin を使ってください。");
+    L.push("・各メニューの note は「Zwift ○○W。」で始め、続けて具体的な手順（何分・何W・どの順番か）を書いてください。WU・CDなどの略語は使わず、ウォームアップ・クールダウンと日本語で書いてください。");
+    L.push("・各メニューに、時間が取れない日のための短縮版 short を付けてください（20〜30分程度。連続系は durationMin、インターバル系は workMin/sets/restMin）。short の note にも同じ書式で手順を書いてください。");
     L.push("・上記のIDに無いメニューを使いたい場合のみ newMenus に定義を追加してください");
     L.push('  （形式: {"id":"半角英数","name":"名前","cat":"分類","zone":"Z4","pMin":91,"pMax":105,"cad":"88-92",');
     L.push('   "st":{"type":"i","wMin":8,"wMax":20,"sets":"3","rest":8},"purpose":"","effect":"","how":"","caution":"","fatigue":7}）');
@@ -2109,7 +2370,7 @@ const app={
   },
   copyCoachSummary(){ this.copyText(this.coachSummary(),"サマリーをコピーしました。AIとの会話に貼り付けて相談してください。"); },
   previewCoachSummary(){
-    this.openModal("コーチ用サマリー",
+    this.openModal("AIに渡すサマリー",
       '<p style="font-size:.8rem;color:var(--sub)">この内容がコピーされます。</p>'
       +'<textarea rows="14" readonly style="font-size:10.5px">'+this.esc(this.coachSummary())+'</textarea>',()=>{},"閉じる");
   },
@@ -2164,15 +2425,25 @@ const app={
         const id=String(s&&s.menuId||"").trim();
         const m=this.data.menus.find(x=>x.id===id)||newMenus.find(x=>x.id===id);
         if(!m){ errs.push("days["+di+"].sessions["+si+"] のメニューID「"+id+"」が見つかりません。"); return; }
-        const planned={};
         const n=v=>{const x=Number(v);return isFinite(x)&&x>0?x:null;};
-        if(m.st.type==="c"){ if(n(s.durationMin))planned.durationMin=n(s.durationMin); }
-        else{
-          if(n(s.workMin))planned.workMin=n(s.workMin);
-          if(s.sets!=null&&String(s.sets).trim())planned.sets=String(s.sets).trim();
-          if(s.restMin!=null&&Number(s.restMin)>=0)planned.restMin=Number(s.restMin);
+        const spec=o=>{
+          const p={};
+          if(!o||typeof o!=="object")return p;
+          if(m.st.type==="c"){ if(n(o.durationMin))p.durationMin=n(o.durationMin); }
+          else{
+            if(n(o.workMin))p.workMin=n(o.workMin);
+            if(o.sets!=null&&String(o.sets).trim())p.sets=String(o.sets).trim();
+            if(o.restMin!=null&&Number(o.restMin)>=0)p.restMin=Number(o.restMin);
+          }
+          return p;
+        };
+        const sess={menuId:id,planned:spec(s),actual:{done:false},note:String(s.note||"").trim()};
+        // 短縮版（任意）: 時間が取れない日用の軽い版
+        if(s.short&&typeof s.short==="object"){
+          const sp=spec(s.short);
+          if(Object.keys(sp).length){ sp.note=String(s.short.note||"").trim(); sess.short=sp; }
         }
-        days[idx].push({menuId:id,planned:planned,actual:{done:false},note:String(s.note||"").trim()});
+        days[idx].push(sess);
       });
     });
     const count=days.reduce((t,d)=>t+d.length,0);
@@ -2204,13 +2475,15 @@ const app={
       const dt=this.addDays(res.mon,i);
       h+='<div><b>'+DAYS_JP[new Date(dt+"T00:00:00").getDay()]+'</b> '+this.fmtMD(dt)+' : '
         +(ss.length?ss.map(s=>{const m=this.data.menus.find(x=>x.id===s.menuId)||res.newMenus.find(x=>x.id===s.menuId);
-            return this.esc(m.name)+" "+this.esc(this.specText(m,s.planned));}).join(" ／ "):'<span style="color:var(--sub)">休養</span>')+'</div>';
+            return this.esc(m.name)+" "+this.esc(this.specText(m,s.planned))
+              +(s.short?' <span style="color:var(--sky)">（短縮版 '+this.esc(this.specText(m,s.short))+'）</span>':'');}).join(" ／ "):'<span style="color:var(--sub)">休養</span>')+'</div>';
     });
     h+='</div>';
-    if(exists)h+='<div class="callout co-warn" style="font-size:.8rem">この週はすでに存在します。<b>実施済みの記録も含めて上書き</b>されます。</div>';
+    if(exists)h+='<div class="callout co-info" style="font-size:.8rem">この週はすでにあります。<b>未実施の予定だけを差し替え</b>ます。実施済みのメニュー・ライド記録・体調・メモはそのまま残ります。</div>';
     box.innerHTML=h;
-    document.getElementById("mOK").textContent=exists?"上書きして取り込む":"取り込む";
-    document.getElementById("mOK").onclick=()=>{ this.importPlanApply(res); this.closeModal(); };
+    document.getElementById("mOK").textContent=exists?"予定を差し替えて取り込む":"取り込む";
+    // 先に閉じてから適用する（適用後に出す「取り込みました」が直後に閉じられないように）
+    document.getElementById("mOK").onclick=()=>{ this.closeModal(); this.importPlanApply(res); };
   },
   importPlanApply(res){
     if(res.newMenus.length){
@@ -2218,18 +2491,36 @@ const app={
       res.newMenus.forEach(m=>{ if(!this.data.customMenus.some(x=>x.id===m.id))this.data.customMenus.push(m); });
       this.data.menus=JSON.parse(JSON.stringify(DEFAULT_DATA.menus)).concat(JSON.parse(JSON.stringify(this.data.customMenus)));
     }
-    const days=res.days.map((ss,i)=>{
-      const dt=this.addDays(res.mon,i);
-      return {day:DAYS_JP[new Date(dt+"T00:00:00").getDay()],date:dt,sessions:ss,
-        dailyLog:{totalTrainingMin:null,dailyNote:"",condition:null,sleepHours:null,weightKg:null,
-                  distanceKm:null,stretch:false,strength:false,rides:[]}};
-    });
     const i=this.data.weeks.findIndex(w=>w.weekStartDate===res.mon);
-    const wk={weekStartDate:res.mon,weekLabel:res.label,phaseId:"",targetHours:res.targetHours,
-      days:days,lastModified:Date.now()};
-    if(i>=0)this.data.weeks[i]=wk; else this.data.weeks.push(wk);
+    let kept=0;
+    if(i>=0){
+      /* 既存の週に取り込む場合は「未実施の予定」だけを差し替える。
+         実施済みのメニュー・ライド記録・体調・メモなど、記録はすべて残す。 */
+      const wk=this.data.weeks[i];
+      wk.days.forEach((d,di)=>{
+        const doneSess=(d.sessions||[]).filter(s=>s.actual&&s.actual.done);
+        kept+=doneSess.length;
+        d.sessions=doneSess.concat(res.days[di]||[]);
+      });
+      wk.weekLabel=res.label;
+      if(res.targetHours)wk.targetHours=res.targetHours;
+      wk.lastModified=Date.now();
+    }else{
+      const days=res.days.map((ss,di)=>{
+        const dt=this.addDays(res.mon,di);
+        return {day:DAYS_JP[new Date(dt+"T00:00:00").getDay()],date:dt,sessions:ss,
+          dailyLog:{totalTrainingMin:null,dailyNote:"",condition:null,sleepHours:null,weightKg:null,
+                    distanceKm:null,stretch:false,strength:false,rides:[]}};
+      });
+      this.data.weeks.push({weekStartDate:res.mon,weekLabel:res.label,phaseId:"",targetHours:res.targetHours,
+        days:days,lastModified:Date.now()});
+    }
+    // すでにライドを取り込み済みの日があれば、新しい予定とも照合しておく
+    const matched=this.autoMatchWeek(res.mon);
     this.curWeek=res.mon; this.save(); this.setPlanView("week"); this.nav("plan");
-    this.confirmModal("取り込みました。プラン画面で内容を確認・編集できます。",()=>{},"OK");
+    this.confirmModal("取り込みました。プラン画面で内容を確認・編集できます。"
+      +(kept?"<br>実施済みのメニュー"+kept+"件はそのまま残しています。":"")
+      +(matched?"<br>取り込み済みのライドと照合して、"+matched+"件を実施済みにしました。":""),()=>{},"OK");
   },
   insightHtml(list,compact){
     if(!list.length)return compact?"":'<div class="card" style="color:var(--sub);font-size:.84rem">この週に特筆すべき点は見つかりませんでした。（判定には前週以前のデータが必要です）</div>';
@@ -2307,7 +2598,7 @@ const app={
         if(dl.stretch)stretchN++; if(dl.strength)strengthN++;
         if(dl.distanceKm){dist+=Number(dl.distanceKm); wDist+=Number(dl.distanceKm);}
         if(dl.weightKg)weights.push(Number(dl.weightKg));
-        const sn=d.sessions.filter(s=>s.actual&&s.actual.sessionNote).map(s=>this.esc(this.menuById(s.menuId).name)+": "+this.esc(s.actual.sessionNote)).join(" ／ ");
+        const sn=d.sessions.filter(s=>s.actual&&s.actual.sessionNote).map(s=>this.esc((this.menuById(s.menuId)||{name:s.menuId}).name)+": "+this.esc(s.actual.sessionNote)).join(" ／ ");
         if(dl.dailyNote||sn)noteDays.push({d:d,dl:dl,sn:sn});
       });
       if(inMonth)weekRows.push({w:w,total:wTotal,done:wDone,min:wMin,dist:wDist});
@@ -2461,11 +2752,13 @@ const app={
     this.data.weeks.forEach(w=>w.days.forEach(d=>{
       if(!d.date.startsWith(y+"-"))return;
       const mo=Number(d.date.slice(5,7)); const M=months[mo-1];
-      let dayDone=false;
       d.sessions.forEach(s=>{ M.total++;
-        if(s.actual&&s.actual.done){M.done++; M.min+=Number(s.actual.durationMin||0); dayDone=true;
+        if(s.actual&&s.actual.done){M.done++;
           if(s.actual.rpe)rpes.push(Number(s.actual.rpe));} });
-      if(dayDone)rideDays++;
+      // 時間は週間・月間と同じ計算（手入力 → Garminのライド → メニュー実績の順）
+      const dm=this.dayMinutes(d);
+      M.min+=dm;
+      if(dm>0)rideDays++;
       const dl=d.dailyLog||{};
       if(dl.condition)conds.push(Number(dl.condition));
       if(dl.sleepHours)sleeps.push(Number(dl.sleepHours));
@@ -2474,11 +2767,11 @@ const app={
     }));
     const tTotal=months.reduce((a,x)=>a+x.total,0), tDone=months.reduce((a,x)=>a+x.done,0);
     const tMin=months.reduce((a,x)=>a+x.min,0), tDist=months.reduce((a,x)=>a+x.dist,0);
-    if(!tTotal){
+    if(!tTotal&&!tMin&&!tDist){
       document.getElementById("revYearBody").innerHTML='<div class="card">'+y+'年のデータはありません。</div>';
       return;
     }
-    const pct=Math.round(tDone/tTotal*100);
+    const pct=tTotal?Math.round(tDone/tTotal*100):"-";
     const avg=a=>a.length?(a.reduce((x,z)=>x+z,0)/a.length).toFixed(1):"-";
     let html='<div class="grid3">'
       +'<div class="stat"><div class="num">'+(tMin/60).toFixed(0)+'<small>h</small></div><div class="lbl">年間 実施時間</div></div>'
@@ -2513,13 +2806,13 @@ const app={
     const maxMin=Math.max(...months.map(x=>x.min),1);
     html+='<h2>月ごとの内訳 <span class="h2-range">'+this.revYear+'年</span></h2><div class="card" style="overflow-x:auto"><table><tr><th>月</th><th>時間</th><th>距離</th><th>達成</th><th></th></tr>';
     months.forEach(M=>{
-      const has=M.total>0;
+      const has=M.total>0||M.min>0||M.dist>0;
       const ym=y+"-"+String(M.m).padStart(2,"0");
       html+='<tr'+(has?"":' style="opacity:.4"')+'><td>'+M.m+'月</td>'
         +'<td style="min-width:120px">'+(has?(M.min/60).toFixed(1)+'h':'-')
         +(has?'<div class="bar-bg" style="height:8px"><div class="bar-fill" style="width:'+Math.round(M.min/maxMin*100)+'%"></div></div>':'')+'</td>'
         +'<td>'+(M.dist?M.dist.toFixed(0)+'km':"-")+'</td>'
-        +'<td>'+(has?M.done+'/'+M.total:"-")+'</td>'
+        +'<td>'+(M.total?M.done+'/'+M.total:"-")+'</td>'
         +'<td>'+(has?'<button class="btn-ghost btn-sm" onclick="app.openMonthReview(\''+ym+'\')">月間で見る</button>':"")+'</td></tr>';
     });
     html+='</table><p style="font-size:.7rem;color:var(--sub)">時間のバーは、最も多い月を100%とした割合です。</p></div>';
@@ -2568,7 +2861,12 @@ const app={
     if(!v||Number(v)<=0){alert("FTPの値を入力してください");return;}
     const a=this.data.athlete;
     a.currentFtpW=Number(v);
-    a.ftpHistory.push({date:this.todayStr(),ftpW:Number(v),testMethod:document.getElementById("s-ftpm").value,note:""});
+    // 同じ日にもう一度更新した場合は、その日の履歴を上書きする（2行にしない）
+    const today=this.todayStr(), method=document.getElementById("s-ftpm").value;
+    const ex=a.ftpHistory.find(h=>h.date===today);
+    if(ex){ ex.ftpW=Number(v); ex.testMethod=method; }
+    else a.ftpHistory.push({date:today,ftpW:Number(v),testMethod:method,note:""});
+    a.ftpHistory.sort((x,y)=>x.date.localeCompare(y.date));
     this.save(); document.getElementById("s-ftp").value="";
     alert("FTPを "+v+"W に更新しました。全メニューのワット数が再計算されます。");
     this.renderSettings();
@@ -2712,6 +3010,11 @@ const app={
           cur.customMenus.push(n);
       });
       cur.menus=JSON.parse(JSON.stringify(DEFAULT_DATA.menus)).concat(JSON.parse(JSON.stringify(cur.customMenus)));
+    }
+    // 使える時間は、自分に無い週だけ取り込む
+    if(inc.avail&&typeof inc.avail==="object"){
+      if(!cur.avail)cur.avail={};
+      Object.keys(inc.avail).forEach(k=>{ if(!cur.avail[k])cur.avail[k]=inc.avail[k]; });
     }
     // 週はlastModifiedが新しい方を採用
     (inc.weeks||[]).forEach(iw=>{
